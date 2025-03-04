@@ -44,6 +44,7 @@
 #include <assert.h>
 
 #if defined(HAVE_VARNISHAPI_4) || defined(HAVE_VARNISHAPI_4_1) || defined(HAVE_VARNISHAPI_5)
+#include <vdef.h>
 #include <vapi/vsc.h>
 #include <vapi/vsm.h>
 #elif defined(HAVE_VARNISHAPI_3)
