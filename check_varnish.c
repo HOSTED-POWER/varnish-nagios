@@ -79,6 +79,19 @@ static const char *status_text[] = {
 };
 
 /*
+ * Missing child uptime means the cache process is unavailable.  Other
+ * missing counters can be caused by version-specific statistic names.
+ */
+static int
+unavailable_status(const char *param)
+{
+
+	if (param != NULL && strcmp(param, "MAIN.uptime") == 0)
+		return (NAGIOS_CRITICAL);
+	return (NAGIOS_WARNING);
+}
+
+/*
  * Parse a range specification
  */
 static int
@@ -271,8 +284,10 @@ check_stats(struct VSM_data *vd, char *param)
 		priv.info = "Cache hit ratio";
 	}
 	if (priv.found != 1) {
-		printf("Unknown parameter '%s'\n", param);
-		exit(1);
+		status = unavailable_status(param);
+		printf("VARNISH %s: Unknown parameter '%s'\n",
+		       status_text[status], param);
+		exit(status);
 	}
 
 	status = check_thresholds(priv.value);
@@ -338,6 +353,7 @@ main(int argc, char **argv)
 #endif
 	char *param = NULL;
 	int opt;
+	int status;
 
 	setlocale(LC_ALL, "");
 
@@ -359,7 +375,7 @@ main(int argc, char **argv)
 			break;
 		case 'n':
 #if defined(HAVE_VARNISHAPI_5)
-			VSC_Arg(vsc, opt, optarg);
+			VSM_Arg(vd, opt, optarg);
 #else
 			VSC_Arg(vd, opt, optarg);
 #endif
@@ -387,8 +403,10 @@ main(int argc, char **argv)
 
 #if defined(HAVE_VARNISHAPI_5)
 	if (VSM_Attach(vd, -1) < 0) {
-		printf("varnish plugin: Cannot attach to varnish. %s", VSM_Error(vd));
-		exit(1);
+		status = unavailable_status(param);
+		printf("VARNISH %s: Cannot attach to varnish. %s\n",
+		       status_text[status], VSM_Error(vd));
+		exit(status);
 	}
 #elif defined(HAVE_VARNISHAPI_4) || defined(HAVE_VARNISHAPI_4_1)
 	if (VSM_Open(vd))
